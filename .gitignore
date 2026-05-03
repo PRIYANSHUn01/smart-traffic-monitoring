@@ -18,12 +18,10 @@ env/
 .env
 *.env
 
-# Logs and data
-logs/*.db
-logs/*.csv
-logs/snapshots/
-*.log
+# Logs and data (all generated — never commit)
+logs/
 data/
+*.log
 
 # YOLO training runs
 runs/
