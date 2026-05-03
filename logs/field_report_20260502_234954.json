@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-05-02T23:49:54.026278",
+  "source": "data/videos/traffic.mp4",
+  "test_duration_s": 60,
+  "total_vehicles": 59,
+  "total_violations": 56,
+  "violations_per_minute": 56.0,
+  "vehicles_per_minute": 59.0,
+  "violation_breakdown": {
+    "DOUBLE_RIDING": 11,
+    "NO_HELMET": 22,
+    "TRIPLE_RIDING": 23
+  }
+}

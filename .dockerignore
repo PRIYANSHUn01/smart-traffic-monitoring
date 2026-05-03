@@ -1,0 +1,30 @@
+# .dockerignore — files excluded from Docker build context
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+.git/
+.gitignore
+*.md
+tests/
+.pytest_cache/
+.mypy_cache/
+
+# Large data files — mount as volumes instead
+data/videos/
+data/snapshots/
+*.db
+*.sqlite
+
+# Model weights — download at runtime or mount
+models/*.pt
+
+# Logs
+logs/
+*.log
