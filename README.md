@@ -3,7 +3,7 @@
 **M.Sc. Computer Science Dissertation Project**
 Priyanshu Negi | Roll No. 2250121750007 | 3rd Semester
 D.S.B. Campus, Kumaun University, Nainital
-Supervisor: Dr. Ashish Mehta | May 2025
+Supervisor: Dr. Ashish Mehta | May 2026
 
 ---
 
@@ -63,7 +63,7 @@ traffic_monitor/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/priyanshunegi7466/smart-traffic-monitoring.git
+git clone https://github.com/PRIYANSHUn01/smart-traffic-monitoring.git
 cd smart-traffic-monitoring
 
 # 2. Install dependencies
@@ -135,4 +135,4 @@ This project was developed as an M.Sc. dissertation and is for academic use.
 
 ---
 
-*Smart Traffic Monitoring System — Priyanshu Negi, Kumaun University, 2025*
+*Smart Traffic Monitoring System — Priyanshu Negi, Kumaun University, 2026*
