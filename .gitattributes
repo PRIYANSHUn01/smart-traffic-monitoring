@@ -1,0 +1,4 @@
+# Mark generated/data files so GitHub excludes them from language stats
+logs/*.html linguist-generated=true
+logs/*.json linguist-generated=true
+*.html linguist-generated=true
