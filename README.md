@@ -40,6 +40,7 @@ An end-to-end AI-powered traffic violation detection system built with YOLOv8, B
 traffic_monitor/
 ├── config.py                 # Central config — model paths, thresholds, flags
 ├── pipeline.py               # Main video processing pipeline
+├── api.py                    # FastAPI REST API (5 endpoints)
 ├── modules/
 │   ├── vehicle_detector.py   # YOLOv8 + ByteTrack detection & counting
 │   ├── helmet_detector.py    # Helmet violation detection
@@ -48,11 +49,15 @@ traffic_monitor/
 ├── dashboard/
 │   └── app.py                # Streamlit dashboard
 ├── utils/
+│   ├── database.py           # SQLite + CSV logging
 │   └── helpers.py            # Shared utilities
-├── tests/                    # Unit + integration tests
+├── data/
+│   ├── videos/               # Input video files
+│   └── snapshots/            # Violation snapshots
 ├── models/
 │   ├── vehicle_detector.pt   # Custom-trained two-wheeler detector
 │   └── helmet_detect.pt      # Custom helmet classifier
+├── reset_data.py             # One-command data reset utility
 ├── Dockerfile
 ├── Dockerfile.dashboard
 ├── docker-compose.yml
@@ -86,7 +91,7 @@ streamlit run dashboard/app.py
 
 ```bash
 docker-compose up
-# API  → http://localhost:8000
+# API       → http://localhost:8000
 # Dashboard → http://localhost:8501
 ```
 
@@ -111,6 +116,13 @@ docker-compose up
 | GET | `/violations/search` | `?plate=UP14` fuzzy search |
 | GET | `/counts/hourly` | Per-hour vehicle counts |
 
+## Reset Data
+
+```bash
+python reset_data.py
+# Options: Full reset / DB only / Logs only
+```
+
 ## Development Journey
 
 This project was built over **45 structured days**:
@@ -123,7 +135,7 @@ This project was built over **45 structured days**:
 
 ```bash
 # Unit tests (24 test cases)
-python -m pytest tests/ -v
+python day31_test.py
 
 # Integration test suite (6 stages)
 python day42_test.py

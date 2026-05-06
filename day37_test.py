@@ -32,14 +32,14 @@ BASE_URL = "http://localhost:8000"
 # ── Test cases ────────────────────────────────────────────────────────────────
 
 def test_health(base):
-    r = requests.get(f"{base}/health", timeout=5)
+    r = requests.get(f"{base}/health", timeout=5) # type: ignore
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "ok"
     assert "db_exists" in data
 
 def test_stats(base):
-    r = requests.get(f"{base}/stats", timeout=5)
+    r = requests.get(f"{base}/stats", timeout=5) # type: ignore
     assert r.status_code == 200
     data = r.json()
     assert "total_vehicles"   in data
@@ -47,25 +47,25 @@ def test_stats(base):
     assert "breakdown"        in data
 
 def test_violations_list(base):
-    r = requests.get(f"{base}/violations?limit=5", timeout=5)
+    r = requests.get(f"{base}/violations?limit=5", timeout=5) # type: ignore
     assert r.status_code == 200
     data = r.json()
     assert "violations" in data
     assert len(data["violations"]) <= 5
 
 def test_violations_search(base):
-    r = requests.get(f"{base}/violations/search?plate=UP", timeout=5)
+    r = requests.get(f"{base}/violations/search?plate=UP", timeout=5) # type: ignore
     assert r.status_code == 200
     data = r.json()
     assert "results" in data
     assert data["query"] == "UP"
 
 def test_invalid_search_rejected(base):
-    r = requests.get(f"{base}/violations/search?plate=X", timeout=5)
+    r = requests.get(f"{base}/violations/search?plate=X", timeout=5) # type: ignore
     assert r.status_code == 422   # FastAPI validation error for min_length=2
 
 def test_hourly(base):
-    r = requests.get(f"{base}/counts/hourly", timeout=5)
+    r = requests.get(f"{base}/counts/hourly", timeout=5) # type: ignore
     assert r.status_code == 200
     data = r.json()
     assert "hourly" in data
@@ -80,7 +80,7 @@ def load_test(base, n=50):
     def call(endpoint):
         t0 = time.perf_counter()
         try:
-            r = requests.get(f"{base}{endpoint}", timeout=5)
+            r = requests.get(f"{base}{endpoint}", timeout=5) # type: ignore
             ok = r.status_code == 200
         except:
             ok = False
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         selftest()
     else:
         try:
-            requests.get(f"{args.base}/health", timeout=2)
+            requests.get(f"{args.base}/health", timeout=2) # type: ignore
             run_tests(args.base)
         except Exception:
             print(f"\n  Cannot reach {args.base}")
