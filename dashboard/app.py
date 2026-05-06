@@ -180,6 +180,109 @@ with ch2:
         st.info("No violations recorded yet.")
 
 
+# ── Row 2b: Helmet status + Rider count ──────────────────────────────────────
+st.markdown("---")
+hc1, hc2, hc3 = st.columns(3)
+
+with hc1:
+    st.markdown('<div class="section-title">🪖 Helmet Status (All Detections)</div>',
+                unsafe_allow_html=True)
+    if not viol_df.empty and "helmet_status" in viol_df.columns:
+        helmet_counts = (
+            viol_df["helmet_status"]
+            .replace("", "unknown")
+            .fillna("unknown")
+            .value_counts()
+            .reset_index()
+        )
+        helmet_counts.columns = ["Status", "Count"]
+        color_map = {
+            "with_helmet":    "#0F6E56",
+            "without_helmet": "#E24B4A",
+            "unknown":        "#aaaaaa",
+        }
+        fig_h = px.pie(
+            helmet_counts, values="Count", names="Status",
+            color="Status", color_discrete_map=color_map,
+            hole=0.45,
+        )
+        fig_h.update_traces(textinfo="percent+label")
+        fig_h.update_layout(margin=dict(t=10,b=0,l=0,r=0), height=270,
+                            showlegend=True)
+        st.plotly_chart(fig_h, use_container_width=True)
+
+        with_h    = int((viol_df["helmet_status"] == "with_helmet").sum())
+        without_h = int((viol_df["helmet_status"] == "without_helmet").sum())
+        st.caption(f"✅ With helmet: **{with_h}** &nbsp;|&nbsp; ❌ Without helmet: **{without_h}**")
+    else:
+        st.info("No helmet data yet.")
+
+with hc2:
+    st.markdown('<div class="section-title">🏍️ Riders per Bike Distribution</div>',
+                unsafe_allow_html=True)
+    if not viol_df.empty and "rider_count" in viol_df.columns:
+        rider_data = (
+            viol_df["rider_count"]
+            .fillna(1).astype(int)
+            .value_counts()
+            .sort_index()
+            .reset_index()
+        )
+        rider_data.columns = ["Riders", "Count"]
+        rider_data["Label"] = rider_data["Riders"].map(
+            {1: "Solo (1)", 2: "Double (2)", 3: "Triple (3+)"}
+        ).fillna(rider_data["Riders"].astype(str))
+        color_map_r = {"Solo (1)": "#0F6E56", "Double (2)": "#BA7517", "Triple (3+)": "#E24B4A"}
+        fig_r = px.bar(
+            rider_data, x="Label", y="Count",
+            color="Label", color_discrete_map=color_map_r,
+            labels={"Label": "Rider Count", "Count": "Violations"},
+        )
+        fig_r.update_layout(showlegend=False, margin=dict(t=10,b=0,l=0,r=0),
+                            height=270)
+        st.plotly_chart(fig_r, use_container_width=True)
+
+        solo   = int((viol_df["rider_count"].fillna(1).astype(int) == 1).sum())
+        double = int((viol_df["rider_count"].fillna(1).astype(int) == 2).sum())
+        triple = int((viol_df["rider_count"].fillna(1).astype(int) >= 3).sum())
+        st.caption(f"Solo: **{solo}** &nbsp;|&nbsp; Double: **{double}** &nbsp;|&nbsp; Triple+: **{triple}**")
+    else:
+        st.info("No rider count data yet.")
+
+with hc3:
+    st.markdown('<div class="section-title">🔢 Recent Number Plates Detected</div>',
+                unsafe_allow_html=True)
+    if not viol_df.empty and "plate_number" in viol_df.columns:
+        plates = (
+            viol_df[viol_df["plate_number"].notna() &
+                    (viol_df["plate_number"] != "UNKNOWN") &
+                    (viol_df["plate_number"] != "")]
+            [["timestamp", "plate_number", "violation_type"]]
+            .head(10)
+        )
+        if not plates.empty:
+            plates.columns = ["Time", "Plate", "Violation"]
+            plates["Time"] = pd.to_datetime(
+                plates["Time"], errors="coerce"
+            ).dt.strftime("%H:%M:%S")
+            st.dataframe(plates, use_container_width=True, height=270,
+                         hide_index=True)
+        else:
+            st.info("No plates read yet.\nPlates appear once OCR detects them.")
+
+        total_plates = int(
+            viol_df["plate_number"].notna()
+            .sum() if not viol_df.empty else 0
+        )
+        unknown = int(
+            (viol_df["plate_number"] == "UNKNOWN").sum()
+            if not viol_df.empty else 0
+        )
+        st.caption(f"Total records: **{total_plates}** &nbsp;|&nbsp; UNKNOWN: **{unknown}**")
+    else:
+        st.info("No plate data yet.")
+
+
 # ── Row 3: Hourly chart ───────────────────────────────────────────────────────
 st.markdown('<div class="section-title">Hourly Vehicle Count (Today)</div>',
             unsafe_allow_html=True)
