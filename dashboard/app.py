@@ -52,6 +52,7 @@ st.markdown("""
 def get_db():
     return TrafficDB()
 
+@st.cache_data(ttl=2)
 def load_violations_df():
     if not os.path.exists(DB_PATH):
         return pd.DataFrame()
@@ -63,6 +64,7 @@ def load_violations_df():
     conn.close()
     return df
 
+@st.cache_data(ttl=2)
 def load_vehicle_counts_df():
     if not os.path.exists(DB_PATH):
         return pd.DataFrame()
@@ -77,7 +79,7 @@ def load_vehicle_counts_df():
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x60?text=TrafficAI", width=200)
+    st.markdown("## 🚦 TrafficAI")
     st.markdown("### Settings")
 
     auto_refresh = st.checkbox("Auto refresh (3s)", value=True)
@@ -112,10 +114,11 @@ st.markdown('<div class="header-title">🚦 Traffic Monitoring Dashboard</div>',
 st.caption(f"Database: {DB_PATH}")
 
 # Load data
-viol_df   = load_violations_df()
-count_df  = load_vehicle_counts_df()
+all_viol_df = load_violations_df()    # unfiltered — used for KPI metrics
+count_df    = load_vehicle_counts_df()
 
-# Apply filters
+# Apply filters for display (charts + table)
+viol_df = all_viol_df.copy()
 if not viol_df.empty:
     if viol_filter != "All":
         viol_df = viol_df[viol_df["violation_type"] == viol_filter]
@@ -124,16 +127,16 @@ if not viol_df.empty:
             plate_search.upper(), na=False)]
 
 
-# ── Row 1: Summary metrics ────────────────────────────────────────────────────
+# ── Row 1: Summary metrics (always unfiltered) ───────────────────────────────
 st.markdown("---")
 c1, c2, c3, c4, c5 = st.columns(5)
 
 total_vehicles  = len(count_df) if not count_df.empty else 0
-total_viol      = len(viol_df)  if not viol_df.empty else 0
-no_helmet_count = len(viol_df[viol_df["violation_type"] == "NO_HELMET"]) \
-                  if not viol_df.empty else 0
-triple_count    = len(viol_df[viol_df["violation_type"] == "TRIPLE_RIDING"]) \
-                  if not viol_df.empty else 0
+total_viol      = len(all_viol_df) if not all_viol_df.empty else 0
+no_helmet_count = int((all_viol_df["violation_type"] == "NO_HELMET").sum()) \
+                  if not all_viol_df.empty else 0
+triple_count    = int((all_viol_df["violation_type"] == "TRIPLE_RIDING").sum()) \
+                  if not all_viol_df.empty else 0
 viol_rate = f"{(total_viol/total_vehicles*100):.1f}%" if total_vehicles > 0 else "0%"
 
 c1.metric("🚗 Total Vehicles",   total_vehicles)
@@ -330,7 +333,7 @@ if not viol_df.empty:
                 with cols[i % 4]:
                     img = Image.open(path)
                     st.image(img, caption=os.path.basename(path),
-                             use_column_width=True)
+                             use_container_width=True)
         else:
             st.info("Snapshot images will appear here when violations are recorded.")
 else:

@@ -116,5 +116,6 @@ SAVE_FRAMES  = True     # save snapshot image on each violation
 
 
 # ── Auto-create required directories ─────────────
-for _dir in [MODELS_DIR, SNAPSHOTS_DIR, LOGS_DIR]:
+VIDEOS_DIR = os.path.join(DATA_DIR, "videos")
+for _dir in [MODELS_DIR, SNAPSHOTS_DIR, LOGS_DIR, VIDEOS_DIR]:
     os.makedirs(_dir, exist_ok=True)
