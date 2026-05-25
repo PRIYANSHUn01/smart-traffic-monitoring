@@ -2,6 +2,7 @@
 
 import sqlite3
 import csv
+from contextlib import contextmanager
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,13 +51,18 @@ class TrafficDB:
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self._init_db()
 
-    def _connect(self):
+    @contextmanager
+    def _get_conn(self):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row  # rows behave like dicts
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _init_db(self):
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             conn.execute(CREATE_TABLE)
             conn.execute(CREATE_COUNTS_TABLE)
         log.info(f"Database ready: {self.db_path}")
@@ -77,7 +83,7 @@ class TrafficDB:
         params = (now_iso(), track_id, plate, vehicle_type,
                   rider_count, helmet_status, violation_type,
                   snapshot_path, frame_number)
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             conn.execute(sql, params)
         log.info(f"Violation logged: {violation_type} | Plate:{plate} | ID:{track_id}")
 
@@ -87,7 +93,7 @@ class TrafficDB:
     def log_vehicle_count(self, vehicle_type: str):
         """Increment vehicle count (called when vehicle crosses count line)"""
         sql = "INSERT INTO vehicle_counts (timestamp, vehicle_type) VALUES (?,?)"
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             conn.execute(sql, (now_iso(), vehicle_type))
 
     def _append_csv(self, params):
@@ -109,12 +115,12 @@ class TrafficDB:
             SELECT * FROM violations
             ORDER BY id DESC LIMIT ?
         """
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             rows = conn.execute(sql, (limit,)).fetchall()
         return [dict(r) for r in rows]
 
     def get_total_violations(self):
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             return conn.execute(
                 "SELECT COUNT(*) FROM violations"
             ).fetchone()[0]
@@ -125,7 +131,7 @@ class TrafficDB:
             SELECT violation_type, COUNT(*) as cnt
             FROM violations GROUP BY violation_type
         """
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             rows = conn.execute(sql).fetchall()
         return {r["violation_type"]: r["cnt"] for r in rows}
 
@@ -135,12 +141,12 @@ class TrafficDB:
             SELECT vehicle_type, COUNT(*) as cnt
             FROM vehicle_counts GROUP BY vehicle_type
         """
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             rows = conn.execute(sql).fetchall()
         return {r["vehicle_type"]: r["cnt"] for r in rows}
 
     def get_total_vehicles(self):
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             return conn.execute(
                 "SELECT COUNT(*) FROM vehicle_counts"
             ).fetchone()[0]
@@ -150,7 +156,7 @@ class TrafficDB:
             SELECT * FROM violations
             WHERE plate_number LIKE ? ORDER BY id DESC
         """
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             rows = conn.execute(sql, (f"%{plate}%",)).fetchall()
         return [dict(r) for r in rows]
 
@@ -163,6 +169,6 @@ class TrafficDB:
             WHERE date(timestamp) = date('now')
             GROUP BY hour ORDER BY hour
         """
-        with self._connect() as conn:
+        with self._get_conn() as conn:
             rows = conn.execute(sql).fetchall()
         return [(r["hour"], r["cnt"]) for r in rows]
