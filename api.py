@@ -2,16 +2,54 @@
 api.py — FastAPI REST API for Smart Traffic Monitoring System
 Run: uvicorn api:app --reload --port 8000
 Docs: http://127.0.0.1:8000/docs
+
+SECURITY:
+  - Set API_KEY in your .env file (required for protected endpoints).
+  - Set ALLOWED_ORIGINS as a comma-separated list of trusted origins.
+  - Never expose this API publicly without an API key.
 """
 
+import os
 import time
 from datetime import datetime
-from fastapi import FastAPI, Query, HTTPException
+
+from fastapi import FastAPI, Query, HTTPException, Security, Depends
+from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 
 from utils.database import TrafficDB
+from utils.helpers import get_logger
 
+log = get_logger("api")
 START_TIME = time.time()
+
+# ── Security configuration ────────────────────────────────────────────────────
+
+# Load from environment — never hardcode this value
+API_KEY = os.getenv("API_KEY", "")
+
+# Restrict to known origins only (comma-separated in env)
+# Example: ALLOWED_ORIGINS=http://localhost:8501,https://yourdomain.com
+_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:8501")
+ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def require_api_key(key: str = Security(api_key_header)):
+    """Dependency: reject requests that do not carry a valid API key."""
+    if not API_KEY:
+        # Key not configured — warn but allow (dev mode safety net)
+        log.warning("API_KEY is not set. Set it in .env to secure all endpoints.")
+        return
+    if key != API_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key. Set X-API-Key header.",
+        )
+
+
+# ── App setup ─────────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="Smart Traffic Monitoring API",
@@ -21,9 +59,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,   # VUL-2 FIX: no more wildcard "*"
     allow_methods=["GET"],
-    allow_headers=["*"],
+    allow_headers=["X-API-Key"],
 )
 
 db = TrafficDB()
@@ -33,13 +71,15 @@ db = TrafficDB()
 
 @app.get("/health", tags=["System"])
 def health():
-    """Database status and API uptime."""
+    """Database status and API uptime (no auth required — public endpoint)."""
     uptime_sec = int(time.time() - START_TIME)
     try:
         total = db.get_total_violations()
         db_status = "ok"
     except Exception as e:
-        db_status = f"error: {e}"
+        # VUL-5 FIX: log the real error internally, return generic status to client
+        log.error(f"DB health check failed: {e}")
+        db_status = "error"
         total = None
     return {
         "status": "running",
@@ -52,7 +92,7 @@ def health():
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
-@app.get("/stats", tags=["Analytics"])
+@app.get("/stats", tags=["Analytics"], dependencies=[Depends(require_api_key)])
 def stats():
     """Summary counts: violations, vehicles, and breakdown by type."""
     return {
@@ -65,7 +105,7 @@ def stats():
 
 # ── Violations ────────────────────────────────────────────────────────────────
 
-@app.get("/violations", tags=["Violations"])
+@app.get("/violations", tags=["Violations"], dependencies=[Depends(require_api_key)])
 def get_violations(limit: int = Query(default=20, ge=1, le=500)):
     """
     Return the most recent violations.
@@ -75,7 +115,7 @@ def get_violations(limit: int = Query(default=20, ge=1, le=500)):
     return {"count": len(rows), "violations": rows}
 
 
-@app.get("/violations/search", tags=["Violations"])
+@app.get("/violations/search", tags=["Violations"], dependencies=[Depends(require_api_key)])
 def search_violations(plate: str = Query(..., min_length=2, description="Partial plate number")):
     """
     Search violations by plate number (partial match).
@@ -89,7 +129,7 @@ def search_violations(plate: str = Query(..., min_length=2, description="Partial
 
 # ── Counts ────────────────────────────────────────────────────────────────────
 
-@app.get("/counts/hourly", tags=["Analytics"])
+@app.get("/counts/hourly", tags=["Analytics"], dependencies=[Depends(require_api_key)])
 def hourly_counts():
     """Per-hour vehicle counts for today (for dashboard bar chart)."""
     data = db.get_hourly_counts()

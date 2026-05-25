@@ -1,9 +1,14 @@
 # ─────────────────────────────────────────────────
 # config.py  —  Central settings for entire project
-# Change these values to match your setup
+# Sensitive values are loaded from environment /
+# a .env file — never hardcode credentials here.
 # ─────────────────────────────────────────────────
 
 import os
+from dotenv import load_dotenv
+
+# Load .env file if present (values can override below defaults)
+load_dotenv()
 
 # ── Paths ────────────────────────────────────────
 BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
@@ -105,13 +110,15 @@ DASHBOARD_TITLE   = "Traffic Monitoring System"
 REFRESH_RATE_MS   = 300    # dashboard refresh interval
 
 # ── Alerts (Email) ───────────────────────────────
-ENABLE_EMAIL_ALERTS = False
-EMAIL_SENDER        = "your_email@gmail.com"
-EMAIL_RECIPIENT     = "officer@dept.gov.in"
-EMAIL_APP_PASSWORD  = ""   # use Gmail App Password, NOT your real password
+# SECURITY: All email credentials are loaded from environment variables.
+# Set them in your .env file — never hardcode them here.
+ENABLE_EMAIL_ALERTS = os.getenv("ENABLE_EMAIL_ALERTS", "false").lower() == "true"
+EMAIL_SENDER        = os.getenv("EMAIL_SENDER", "")        # e.g. alerts@yourdomain.com
+EMAIL_RECIPIENT     = os.getenv("EMAIL_RECIPIENT", "")     # e.g. officer@dept.gov.in
+EMAIL_APP_PASSWORD  = os.getenv("EMAIL_APP_PASSWORD", "")  # Gmail App Password
 
 # ── Logging ──────────────────────────────────────
-LOG_LEVEL    = "INFO"   # DEBUG / INFO / WARNING / ERROR
+LOG_LEVEL    = os.getenv("LOG_LEVEL", "INFO").upper()   # DEBUG / INFO / WARNING / ERROR
 SAVE_FRAMES  = True     # save snapshot image on each violation
 
 

@@ -1,6 +1,6 @@
-# Traffic Monitoring System — Dockerfile
-# Build:  docker build -t traffic-monitor .
-# Run:    docker run --rm -v $(pwd)/data:/app/data traffic-monitor
+# Traffic Monitoring System — Dockerfile (API)
+# Build:  docker build -t traffic-monitor-api .
+# Run:    docker run --rm -p 8000:8000 -v $(pwd)/data:/app/data traffic-monitor-api
 
 FROM python:3.10-slim
 
@@ -26,8 +26,13 @@ COPY . .
 # Create data directories
 RUN mkdir -p data/videos data/snapshots logs models
 
-# Default: run the API server (headless — no cv2.imshow)
+# VUL-7 FIX: run as a non-root user for container security hardening
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser \
+    && chown -R appuser:appgroup /app
+USER appuser
+
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8000
 
-CMD ["python", "day36_test.py", "--host", "0.0.0.0", "--port", "8000"]
+# VUL-8 FIX: was pointing to day36_test.py — now correctly runs the API server
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

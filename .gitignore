@@ -42,7 +42,7 @@ Thumbs.db
 # Temp files
 *.tmp
 *.bak
-{modules,dashboard,data
+# (Removed malformed brace-glob that caused tooling parse errors)
 
 # Keep model files (they are small enough)
 !models/*.pt

@@ -11,10 +11,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 def get_logger(name: str) -> logging.Logger:
+    """Return a named logger whose level is controlled by config.LOG_LEVEL."""
     logger = logging.getLogger(name)
     if logger.handlers:
         return logger
-    logger.setLevel(logging.INFO)
+    # VUL-10 FIX: respect LOG_LEVEL from config instead of always using INFO
+    try:
+        import config as _cfg
+        level_name = getattr(_cfg, "LOG_LEVEL", "INFO").upper()
+    except ImportError:
+        level_name = "INFO"
+    level = getattr(logging, level_name, logging.INFO)
+    logger.setLevel(level)
     fmt = logging.Formatter("%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
                             datefmt="%H:%M:%S")
     ch = logging.StreamHandler()

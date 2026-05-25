@@ -15,6 +15,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DB_PATH, CSV_LOG_PATH, DASHBOARD_TITLE, SNAPSHOTS_DIR
 from utils.database import TrafficDB
 
+import re as _re   # for safe plate search (ReDoS prevention)
+
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title=DASHBOARD_TITLE,
@@ -111,7 +113,8 @@ with st.sidebar:
 # ── Main content ──────────────────────────────────────────────────────────────
 st.markdown('<div class="header-title">🚦 Traffic Monitoring Dashboard</div>',
             unsafe_allow_html=True)
-st.caption(f"Database: {DB_PATH}")
+# VUL-6 FIX: show only the database filename, not the full absolute path
+st.caption(f"Database: {os.path.basename(DB_PATH)}")
 
 # Load data
 all_viol_df = load_violations_df()    # unfiltered — used for KPI metrics
@@ -123,8 +126,10 @@ if not viol_df.empty:
     if viol_filter != "All":
         viol_df = viol_df[viol_df["violation_type"] == viol_filter]
     if plate_search:
+        # VUL-4/ReDoS FIX: escape user input before using in regex via str.contains
+        safe_plate = _re.escape(plate_search.upper())
         viol_df = viol_df[viol_df["plate_number"].str.contains(
-            plate_search.upper(), na=False)]
+            safe_plate, na=False, regex=True)]
 
 
 # ── Row 1: Summary metrics (always unfiltered) ───────────────────────────────

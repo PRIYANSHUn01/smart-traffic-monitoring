@@ -5,6 +5,7 @@ import cv2
 import sys
 import os
 import time
+from collections import OrderedDict
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
@@ -66,7 +67,11 @@ class TrafficPipeline:
         self.fps_counter    = 0
         self.fps            = 0.0
         self.fps_timer      = time.time()
-        self.violation_ids  = set()   # track IDs already logged as violations
+        # VUL-9 FIX: Use a bounded cache (max 50 000 track IDs) to prevent
+        # memory exhaustion on long-running streams. OrderedDict preserves
+        # insertion order so the oldest entry is evicted first.
+        self._MAX_VIOLATION_CACHE = 50_000
+        self.violation_ids: OrderedDict = OrderedDict()   # {track_id: True}
 
         log.info("Pipeline ready.")
 
@@ -187,6 +192,7 @@ class TrafficPipeline:
     def _check_and_log_violation(self, frame, det):
         """Check one detection for violations and log if new"""
         tid = det["track_id"]
+        # VUL-9 FIX: check bounded OrderedDict instead of unbounded set
         if tid in self.violation_ids:
             return   # already logged this vehicle
 
@@ -206,7 +212,10 @@ class TrafficPipeline:
         if not violations:
             return
 
-        self.violation_ids.add(tid)
+        # VUL-9 FIX: evict oldest entry if cache is full before adding new one
+        if len(self.violation_ids) >= self._MAX_VIOLATION_CACHE:
+            self.violation_ids.popitem(last=False)
+        self.violation_ids[tid] = True
         vtype = det.get("vehicle_type", "motorcycle")
         plate = det.get("plate", "UNKNOWN")
         helmet = det.get("helmet_status", "unknown")
