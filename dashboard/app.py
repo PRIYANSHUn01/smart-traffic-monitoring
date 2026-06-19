@@ -9,6 +9,8 @@ import sqlite3
 import os
 import sys
 import time
+import yaml
+from yaml.loader import SafeLoader
 from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,6 +26,59 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ── Authentication (MED-3 FIX) ────────────────────────────────────────────────
+# Blocks all dashboard access behind a username/password login.
+# Setup: copy credentials.yml.example → credentials.yml and set your hash.
+# Generate a password hash: python dashboard/generate_credentials.py
+
+_CREDS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.yml")
+_authenticator = None
+
+try:
+    import streamlit_authenticator as _stauth
+
+    if not os.path.exists(_CREDS_FILE):
+        st.error(
+            "🔒 **Authentication is not configured.**\n\n"
+            "Run `python dashboard/generate_credentials.py` and follow the "
+            "instructions to create `dashboard/credentials.yml`."
+        )
+        st.stop()
+
+    with open(_CREDS_FILE) as _f:
+        _auth_cfg = yaml.load(_f, Loader=SafeLoader)
+
+    _authenticator = _stauth.Authenticate(
+        credentials=_auth_cfg["credentials"],
+        cookie_name=_auth_cfg["cookie"]["name"],
+        cookie_key=_auth_cfg["cookie"]["key"],
+        cookie_expiry_days=_auth_cfg["cookie"]["expiry_days"],
+    )
+
+    # v0.4.x: login() returns (name, auth_status, username)
+    _login_result = _authenticator.login(location="main")
+    if _login_result is not None:
+        _name, _auth_status, _username = _login_result
+    else:
+        _auth_status = st.session_state.get("authentication_status")
+
+    if _auth_status is False:
+        st.error("❌ Incorrect username or password.")
+        st.stop()
+    elif _auth_status is None:
+        st.info("👆 Please log in to access the Traffic Monitoring Dashboard.")
+        st.stop()
+    # _auth_status is True — fall through to render full dashboard
+
+except ImportError:
+    # streamlit-authenticator not installed — warn but allow access so local
+    # dev workflows are not broken.  NEVER deploy this way in production.
+    st.warning(
+        "⚠️ `streamlit-authenticator` is not installed. "
+        "Dashboard is running **without authentication**. "
+        "Install it: `pip install streamlit-authenticator`"
+    )
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -81,6 +136,14 @@ def load_vehicle_counts_df():
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # Show logout button when auth is active
+    if _authenticator is not None:
+        _authenticator.logout(button_name="🚪 Logout", location="sidebar")
+        _user = st.session_state.get("name", "")
+        if _user:
+            st.caption(f"👤 Logged in as **{_user}**")
+        st.markdown("---")
+
     st.markdown("## 🚦 TrafficAI")
     st.markdown("### Settings")
 
@@ -329,8 +392,17 @@ if not viol_df.empty:
     if show_snapshots and "snapshot_path" in viol_df.columns:
         st.markdown('<div class="section-title">Violation Snapshots</div>',
                     unsafe_allow_html=True)
-        snap_paths = viol_df["snapshot_path"].dropna().tolist()
-        snap_paths = [p for p in snap_paths if os.path.exists(p)][:8]
+        snap_paths_raw = viol_df["snapshot_path"].dropna().tolist()
+
+        # HIGH-3 FIX: resolve each path and confirm it lives inside SNAPSHOTS_DIR
+        # before opening, to prevent a tampered DB from reading arbitrary files.
+        _safe_snap_dir = os.path.realpath(SNAPSHOTS_DIR)
+        snap_paths = []
+        for _p in snap_paths_raw:
+            _real = os.path.realpath(_p)
+            if _real.startswith(_safe_snap_dir + os.sep) and os.path.isfile(_real):
+                snap_paths.append(_real)
+        snap_paths = snap_paths[:8]
 
         if snap_paths:
             cols = st.columns(min(4, len(snap_paths)))

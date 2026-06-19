@@ -1,7 +1,15 @@
 # utils/helpers.py  — Shared utility functions (Days 1-10 and beyond)
 
-import cv2
-import numpy as np
+# cv2 and numpy are only needed for vision/drawing helpers.
+# Wrapping them as optional allows api.py and dashboard/app.py to import
+# this module on Python 3.14+ where the ML packages are not yet available.
+try:
+    import cv2
+    import numpy as np
+    _CV2_AVAILABLE = True
+except ImportError:
+    _CV2_AVAILABLE = False
+
 import os
 import logging
 from datetime import datetime

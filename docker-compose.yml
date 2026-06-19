@@ -14,14 +14,23 @@ services:
     image: traffic-monitor-api
     container_name: traffic_api
     ports:
-      - "8000:8000"
+      # LOW-3 FIX: In production, remove these lines and let nginx handle all
+      # external traffic over TLS. Keep them only for local dev without nginx.
+      - "127.0.0.1:8000:8000"  # bound to loopback only — not public
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./models:/app/models
+    # HIGH-1 FIX: pass security config from host .env into the container.
+    # Without this, API_KEY is empty inside Docker and auth fails open (CRIT-1).
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
       - DB_PATH=/app/data/traffic.db
+      # Explicit overrides ensure these are always set even if .env is missing
+      - API_KEY=${API_KEY:?API_KEY must be set in .env before running docker-compose}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:8501}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -37,14 +46,34 @@ services:
     image: traffic-monitor-dashboard
     container_name: traffic_dashboard
     ports:
-      - "8501:8501"
+      # LOW-3 FIX: same as API — nginx proxies external traffic.
+      - "127.0.0.1:8501:8501"  # bound to loopback only — not public
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./dashboard/credentials.yml:/app/dashboard/credentials.yml:ro
     environment:
       - DB_PATH=/app/data/traffic.db
     depends_on:
       - api
+    restart: unless-stopped
+
+  # ── nginx TLS Reverse Proxy (LOW-3 FIX) ───────────────────────────
+  # Terminates TLS before traffic reaches the application containers.
+  # HTTP (port 80) is redirected to HTTPS (port 443) automatically.
+  # Setup: see nginx/nginx.conf header for certificate generation instructions.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: traffic_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro   # mount your cert.pem + key.pem here
+    depends_on:
+      - api
+      - dashboard
     restart: unless-stopped
 
 volumes:

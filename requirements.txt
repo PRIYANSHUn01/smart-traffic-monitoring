@@ -1,22 +1,24 @@
 # requirements.txt — pinned versions for reproducible, secure deployments
-# VUL-12 FIX: Pinned exact versions to prevent unexpected upstream breakage
+# Pinned exact versions to prevent unexpected upstream breakage
 # and reduce supply-chain attack surface.
 # To update: test with a new version, then update the pin here.
 
-ultralytics==8.2.0
-torch==2.3.1
-torchvision==0.18.1
-opencv-python==4.9.0.80
-numpy==1.26.4
-easyocr==1.7.1
-streamlit==1.35.0
-plotly==5.22.0
-pandas==2.2.2
-Pillow==10.3.0
-tqdm==4.66.4
-python-dotenv==1.0.1
-matplotlib==3.9.0
-pyyaml==6.0.1
-pytest==8.2.0
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
+ultralytics==8.4.39
+torch==2.11.0
+torchvision==0.26.0
+opencv-python==4.13.0.92
+numpy==2.4.4
+easyocr==1.7.2
+streamlit==1.56.0
+plotly==6.7.0
+pandas==3.0.2
+Pillow==12.2.0
+tqdm==4.67.3
+python-dotenv==1.2.2
+matplotlib==3.10.8
+pyyaml==6.0.3
+pytest==9.0.3
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+slowapi==0.1.10
+streamlit-authenticator==0.4.2
