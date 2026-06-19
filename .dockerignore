@@ -22,7 +22,10 @@ data/snapshots/
 *.db
 *.sqlite
 
-# Model weights — download at runtime or mount
+# Model weights — download at runtime or mount as a volume.
+# LOW-2 FIX: exclude root-level .pt files too (yolov8n.pt, yolov8s.pt).
+# Use: docker run -v $(pwd)/models:/app/models ...
+*.pt
 models/*.pt
 
 # Logs

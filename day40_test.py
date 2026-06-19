@@ -58,11 +58,6 @@ class MetricsCollector:
 
     def _trim(self, q):
         cutoff = time.time() - self.window
-        while q and q[0] if isinstance(q[0], float) else q[0][0] < cutoff:
-            q.popleft()
-
-    def _trim(self, q):
-        cutoff = time.time() - self.window
         while q:
             first = q[0]
             ts = first if isinstance(first, float) else first[0]
@@ -161,7 +156,7 @@ class PipelineWatchdog:
     def _watch(self):
         while self._running:
             time.sleep(self.check_interval)
-            if not self._thread.is_alive():
+            if not self._thread.is_alive(): # type: ignore
                 if self._restarts >= self.max_restarts:
                     log.error("Max restarts reached — watchdog giving up")
                     self._maybe_alert("MAX RESTARTS REACHED")

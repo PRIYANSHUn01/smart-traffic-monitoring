@@ -11,6 +11,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# VUL-7 FIX: run as a non-root user for container security hardening
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser \
+    && chown -R appuser:appgroup /app
+USER appuser
+
 EXPOSE 8501
 
 CMD ["streamlit", "run", "dashboard/app.py", \

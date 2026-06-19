@@ -79,7 +79,7 @@ def test_database():
 
     # Insert and retrieve test row
     try:
-        db.log_vehicle_count("test_car", "test_plate", "no_helmet")
+        db.log_vehicle_count("test_car")
         total = db.get_total_vehicles()
         return True, f"Write + read OK, total rows: {total}"
     except Exception as e:

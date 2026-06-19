@@ -18,6 +18,12 @@ env/
 .env
 *.env
 
+# Auth credentials (contains bcrypt hashes — keep private, never commit)
+dashboard/credentials.yml
+
+# TLS private keys and certificates (never commit private keys)
+nginx/ssl/
+
 # Logs and data (all generated — never commit)
 logs/
 data/
@@ -42,7 +48,7 @@ Thumbs.db
 # Temp files
 *.tmp
 *.bak
-{modules,dashboard,data
+# (Removed malformed brace-glob that caused tooling parse errors)
 
 # Keep model files (they are small enough)
 !models/*.pt

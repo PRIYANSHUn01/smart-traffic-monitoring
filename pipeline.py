@@ -5,6 +5,7 @@ import cv2
 import sys
 import os
 import time
+from collections import OrderedDict
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
@@ -66,7 +67,11 @@ class TrafficPipeline:
         self.fps_counter    = 0
         self.fps            = 0.0
         self.fps_timer      = time.time()
-        self.violation_ids  = set()   # track IDs already logged as violations
+        # VUL-9 FIX: Use a bounded cache (max 50 000 track IDs) to prevent
+        # memory exhaustion on long-running streams. OrderedDict preserves
+        # insertion order so the oldest entry is evicted first.
+        self._MAX_VIOLATION_CACHE = 50_000
+        self.violation_ids: OrderedDict = OrderedDict()   # {track_id: True}
 
         log.info("Pipeline ready.")
 
@@ -187,6 +192,7 @@ class TrafficPipeline:
     def _check_and_log_violation(self, frame, det):
         """Check one detection for violations and log if new"""
         tid = det["track_id"]
+        # VUL-9 FIX: check bounded OrderedDict instead of unbounded set
         if tid in self.violation_ids:
             return   # already logged this vehicle
 
@@ -206,7 +212,10 @@ class TrafficPipeline:
         if not violations:
             return
 
-        self.violation_ids.add(tid)
+        # VUL-9 FIX: evict oldest entry if cache is full before adding new one
+        if len(self.violation_ids) >= self._MAX_VIOLATION_CACHE:
+            self.violation_ids.popitem(last=False)
+        self.violation_ids[tid] = True
         vtype = det.get("vehicle_type", "motorcycle")
         plate = det.get("plate", "UNKNOWN")
         helmet = det.get("helmet_status", "unknown")
@@ -234,12 +243,12 @@ class TrafficPipeline:
 
     def _send_alert(self, plate, violations):
         """Optional email alert for violations"""
+        import smtplib
+        from email.mime.text import MIMEText
+        from config import EMAIL_SENDER, EMAIL_RECIPIENT, EMAIL_APP_PASSWORD
+        if not EMAIL_APP_PASSWORD:
+            return
         try:
-            import smtplib
-            from email.mime.text import MIMEText
-            from config import EMAIL_SENDER, EMAIL_RECIPIENT, EMAIL_APP_PASSWORD
-            if not EMAIL_APP_PASSWORD:
-                return
             body = f"Traffic Violation Detected\nPlate: {plate}\nViolations: {', '.join(violations)}"
             msg = MIMEText(body)
             msg["Subject"] = f"[Traffic Alert] {plate}"
@@ -249,8 +258,16 @@ class TrafficPipeline:
                 s.starttls()
                 s.login(EMAIL_SENDER, EMAIL_APP_PASSWORD)
                 s.send_message(msg)
+        except smtplib.SMTPAuthenticationError:
+            # CRIT-2 FIX: catch auth errors specifically so smtplib's exception
+            # message (which can contain base64-encoded credentials) is never
+            # written to log files — even at DEBUG level.
+            log.warning("Email alert failed: SMTP authentication error. "
+                        "Check EMAIL_APP_PASSWORD in .env.")
         except Exception as e:
-            log.debug(f"Email alert failed: {e}")
+            # Log only the exception *type*, not the message, to avoid
+            # accidentally leaking connection details or partial credentials.
+            log.warning(f"Email alert failed: {type(e).__name__}")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

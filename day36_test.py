@@ -34,7 +34,7 @@ except ImportError:
 
 def build_app():
     db  = TrafficDB()
-    app = FastAPI(
+    app = FastAPI( # type: ignore
         title="Traffic Monitoring API",
         description="Query violation data from the Traffic Monitoring System",
         version="1.0.0",
@@ -60,13 +60,13 @@ def build_app():
         }
 
     @app.get("/violations")
-    def violations(limit: int = Query(default=20, le=200)):
+    def violations(limit: int = Query(default=20, le=200)): # type: ignore
         """List recent violations (newest first)."""
         rows = db.get_recent_violations(limit=limit)
         return {"count": len(rows), "violations": rows}
 
     @app.get("/violations/search")
-    def search(plate: str = Query(..., min_length=2)):
+    def search(plate: str = Query(..., min_length=2)): # type: ignore
         """Search violations by plate number."""
         rows = db.search_by_plate(plate.upper())
         return {"query": plate.upper(), "count": len(rows), "results": rows}
@@ -130,4 +130,4 @@ if __name__ == "__main__":
         print()
         print("  Interactive docs: http://localhost:8000/docs")
         print("  Press Ctrl+C to stop\n")
-        uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+        uvicorn.run(app, host=args.host, port=args.port, log_level="info") # type: ignore

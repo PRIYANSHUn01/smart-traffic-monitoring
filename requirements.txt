@@ -1,15 +1,24 @@
-ultralytics>=8.0.0
-torch>=2.0.0
-torchvision>=0.15.0
-opencv-python>=4.8.0
-numpy>=1.24.0
-easyocr>=1.7.0
-streamlit>=1.28.0
-plotly>=5.17.0
-pandas>=2.0.0
-Pillow>=10.0.0
-tqdm>=4.66.0
-python-dotenv>=1.0.0
-matplotlib>=3.7.0
-pyyaml>=6.0
-pytest>=7.4.0
+# requirements.txt — pinned versions for reproducible, secure deployments
+# Pinned exact versions to prevent unexpected upstream breakage
+# and reduce supply-chain attack surface.
+# To update: test with a new version, then update the pin here.
+
+ultralytics==8.4.39
+torch==2.11.0
+torchvision==0.26.0
+opencv-python==4.13.0.92
+numpy==2.4.4
+easyocr==1.7.2
+streamlit==1.56.0
+plotly==6.7.0
+pandas==3.0.2
+Pillow==12.2.0
+tqdm==4.67.3
+python-dotenv==1.2.2
+matplotlib==3.10.8
+pyyaml==6.0.3
+pytest==9.0.3
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+slowapi==0.1.10
+streamlit-authenticator==0.4.2
